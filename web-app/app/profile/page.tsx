@@ -17,7 +17,6 @@ const FIGHTER_AVATARS = ['🪖', '🎯', '🥷', '🛡️', '👑'];
 export default function ProfilePage() {
   const {
     isLoggedIn,
-    login,
     username,
     balance,
     inventory,
@@ -34,12 +33,13 @@ export default function ProfilePage() {
     return (
       <div className="py-20 text-center">
         <h1 className="mb-4 text-2xl font-black text-white">Вы не авторизованы</h1>
-        <button
-          onClick={login}
-          className="rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-500"
+        <p className="text-gray-400 mb-6">Войдите в аккаунт, чтобы увидеть свой профиль и отряд.</p>
+        <Link
+          href="/login"
+          className="inline-block rounded-xl bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-500 transition-colors"
         >
-          Войти через Steam
-        </button>
+          Перейти ко входу
+        </Link>
       </div>
     );
   }

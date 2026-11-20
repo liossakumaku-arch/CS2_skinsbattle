@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { useUser } from '@/context/UserContext';
 
 export default function TopUpModal({ onClose }: { onClose: () => void }) {
-  const { addBalance } = useUser();
+   const { isLoggedIn, addBalance } = useUser(); 
+ if (!isLoggedIn) {
+    return null; 
+  }
+  
   const [amount, setAmount] = useState(500);
 
   const presets = [100, 500, 1000, 5000];

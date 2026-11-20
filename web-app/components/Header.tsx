@@ -83,13 +83,12 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={login}
-                className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
+              <Link
+                href="/login"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
               >
-                Войти через Steam
-              </button>
+                Войти
+              </Link>
             )}
           </div>
         </div>

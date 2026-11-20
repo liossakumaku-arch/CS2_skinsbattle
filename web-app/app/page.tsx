@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import CaseCard from '@/components/CaseCard';
 import { CASES_DATA } from '@/data/casesData';
+import { prisma } from '@/lib/prisma';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const users = await prisma.user.findMany();
   const categories = ['Бюджетные', 'Популярные сборки', 'Элитные кейсы'];
 
   return (
