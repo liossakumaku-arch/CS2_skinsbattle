@@ -82,7 +82,9 @@ export default function BattlesPage() {
       setTimeout(() => {
         const enemyFighter = selectedEnemy.fighters[index];
         const myPower =
-          myFighter.basePower + (myFighter.equippedSkin ? myFighter.equippedSkin.power : 0);
+          myFighter.basePower +
+          (myFighter.weaponeSkin?.power ?? 0) +
+          (myFighter.knifeSkin?.power ?? 0);
 
         // Небольшой элемент удачи (±15%)
         const myRoll = Math.round(myPower * (0.85 + Math.random() * 0.3));
@@ -186,25 +188,29 @@ export default function BattlesPage() {
             <span className="text-amber-400">{totalSquadPower} ⚡</span>
           </div>
           <div className="space-y-2">
-            {fighters.map((f) => {
-              const p = f.basePower + (f.equippedSkin ? f.equippedSkin.power : 0);
-              return (
-                <div
-                  key={f.slotId}
-                  className="flex items-center justify-between rounded-lg bg-gray-950 px-3 py-2 text-sm"
-                >
-                  <div>
-                    <span className="font-bold text-white">{f.name}</span>
-                    {f.equippedSkin && (
-                      <span className="ml-2 text-xs text-gray-400">
-                        [{f.equippedSkin.name}]
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-bold text-amber-400">{p} ⚡</span>
+          {fighters.map((f) => {
+            const p =
+              f.basePower +
+              (f.weaponeSkin?.power ?? 0) +
+              (f.knifeSkin?.power ?? 0);
+            const skins = [f.weaponeSkin, f.knifeSkin].filter(Boolean);
+            return (
+              <div
+                key={f.slotId}
+                className="flex items-center justify-between rounded-lg bg-gray-950 px-3 py-2 text-sm"
+              >
+                <div>
+                  <span className="font-bold text-white">{f.name}</span>
+                  {skins.length > 0 && (
+                    <span className="ml-2 text-xs text-gray-400">
+                      [{skins.map((s) => s!.name).join(', ')}]
+                    </span>
+                  )}
                 </div>
-              );
-            })}
+                <span className="font-bold text-amber-400">{p} ⚡</span>
+              </div>
+            );
+          })}
           </div>
         </div>
 

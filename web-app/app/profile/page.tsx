@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useUser, SkinItem } from '@/context/UserContext';
+import { useUser, SkinItem} from '@/context/UserContext';
+import Image from 'next/image';
 
 const RARITY_BORDER = {
   blue: 'border-blue-500',
@@ -12,7 +13,13 @@ const RARITY_BORDER = {
   gold: 'border-amber-400',
 };
 
-const FIGHTER_AVATARS = ['🪖', '🎯', '🥷', '🛡️', '👑'];
+const FIGHTER_AVATARS = [
+  '/avatars/avatar_1.jpg',
+  '/avatars/avatar_2.jpg',
+  '/avatars/avatar_5.jpg',
+  '/avatars/avatar_3.jpg',
+  '/avatars/avatar_4.jpg',
+];
 
 export default function ProfilePage() {
   const {
@@ -44,15 +51,8 @@ export default function ProfilePage() {
     );
   }
 
-  const handleEquipToFighter = (slotId: number) => {
-    if (!selectedSkin) return;
-    equipSkin(slotId, selectedSkin);
-    setSelectedSkin(null);
-  };
-
   return (
     <div className="py-8">
-      {/* Верхняя панель профиля */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-800 bg-gray-900 p-6">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-3xl">
@@ -82,21 +82,23 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        {/* Левая колонка: 5 персонажей отряда */}
         <div className="lg:col-span-7">
           <h2 className="mb-4 text-lg font-extrabold uppercase text-white">
             Ваш отряд (5 бойцов)
           </h2>
           {selectedSkin && (
             <div className="mb-4 rounded-xl border border-amber-500 bg-amber-500/10 p-3 text-sm text-amber-300">
-              Выбран скин: <b>{selectedSkin.name} | {selectedSkin.skin}</b>. Нажмите «Экипировать» на нужном персонаже!
+              Выбран скин: <b>{selectedSkin.name} | {selectedSkin.skin}</b>. Нажмите
+              «Экипировать» в нужном слоте (Оружие или Нож)!
             </div>
           )}
 
           <div className="space-y-3">
             {fighters.map((fighter, idx) => {
               const currentPower =
-                fighter.basePower + (fighter.equippedSkin ? fighter.equippedSkin.power : 0);
+                fighter.basePower +
+                (fighter.weaponeSkin?.power ?? 0) +
+                (fighter.knifeSkin?.power ?? 0);
 
               return (
                 <div
@@ -104,8 +106,14 @@ export default function ProfilePage() {
                   className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-800 bg-gray-900 p-4"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gray-800 text-2xl">
-                      {FIGHTER_AVATARS[idx]}
+                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-gray-800">
+                      <Image
+                        src={FIGHTER_AVATARS[idx % FIGHTER_AVATARS.length]}
+                        alt={fighter.name}
+                        width={56}
+                        height={56}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -117,48 +125,38 @@ export default function ProfilePage() {
                       <div className="text-sm font-bold text-amber-400">
                         Сила: {currentPower} ⚡{' '}
                         <span className="text-xs font-normal text-gray-500">
-                          (база {fighter.basePower} + скин {fighter.equippedSkin?.power || 0})
+                          (база {fighter.basePower} + оружие{' '}
+                          {fighter.weaponeSkin?.power ?? 0} + нож{' '}
+                          {fighter.knifeSkin?.power ?? 0})
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Слот экипированного оружия/скина */}
-                  <div className="flex items-center gap-3">
-                    {fighter.equippedSkin ? (
-                      <div
-                        className={`flex items-center gap-3 rounded-lg border-l-4 bg-gray-950 px-3 py-2 ${
-                          RARITY_BORDER[fighter.equippedSkin.rarity]
-                        }`}
-                      >
-                        <div>
-                          <div className="text-xs font-bold text-white">
-                            {fighter.equippedSkin.name} | {fighter.equippedSkin.skin}
-                          </div>
-                          <div className="text-[11px] font-bold text-amber-400">
-                            +{fighter.equippedSkin.power} ⚡
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => unequipSkin(fighter.slotId)}
-                          className="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300 hover:bg-red-600 hover:text-white"
-                          title="Снять скин"
-                        >
-                          Снять
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500">Слот пуст</span>
-                    )}
-
-                    {selectedSkin && (
-                      <button
-                        onClick={() => handleEquipToFighter(fighter.slotId)}
-                        className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-extrabold text-gray-950 hover:bg-amber-400"
-                      >
-                        Экипировать
-                      </button>
-                    )}
+                  {/* Два слота: оружие + нож */}
+                  <div className="flex flex-col gap-2">
+                    <SkinSlotRow
+                      label="Оружие"
+                      skin={fighter.weaponeSkin}
+                      selected={selectedSkin}
+                      onEquip={() => {
+                        if (!selectedSkin) return;
+                        equipSkin(fighter.slotId, selectedSkin, 'weaponeSkin');
+                        setSelectedSkin(null);
+                      }}
+                      onUnequip={() => unequipSkin(fighter.slotId, 'weaponeSkin')}
+                    />
+                    <SkinSlotRow
+                      label="Нож"
+                      skin={fighter.knifeSkin}
+                      selected={selectedSkin}
+                      onEquip={() => {
+                        if (!selectedSkin) return;
+                        equipSkin(fighter.slotId, selectedSkin, 'knifeSkin');
+                        setSelectedSkin(null);
+                      }}
+                      onUnequip={() => unequipSkin(fighter.slotId, 'knifeSkin')}
+                    />
                   </div>
                 </div>
               );
@@ -230,6 +228,64 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* Строка одного слота экипировки бойца */
+function SkinSlotRow({
+  label,
+  skin,
+  selected,
+  onEquip,
+  onUnequip,
+}: {
+  label: string;
+  skin: SkinItem | null;
+  selected: SkinItem | null;
+  onEquip: () => void;
+  onUnequip: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-14 text-[10px] font-bold uppercase text-gray-500">
+        {label}
+      </span>
+
+      {skin ? (
+        <div
+          className={`flex items-center gap-3 rounded-lg border-l-4 bg-gray-950 px-3 py-2 ${
+            RARITY_BORDER[skin.rarity] ?? ''
+          }`}
+        >
+          <div>
+            <div className="text-xs font-bold text-white">
+              {skin.name} | {skin.skin}
+            </div>
+            <div className="text-[11px] font-bold text-amber-400">
+              +{skin.power} ⚡
+            </div>
+          </div>
+          <button
+            onClick={onUnequip}
+            className="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300 hover:bg-red-600 hover:text-white"
+            title={`Снять ${label.toLowerCase()}`}
+          >
+            Снять
+          </button>
+        </div>
+      ) : (
+        <span className="text-xs text-gray-500">пусто</span>
+      )}
+
+      {selected && (
+        <button
+          onClick={onEquip}
+          className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-extrabold text-gray-950 hover:bg-amber-400"
+        >
+          Экипировать
+        </button>
+      )}
     </div>
   );
 }
