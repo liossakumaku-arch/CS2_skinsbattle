@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; 
 import { useUser } from '@/context/UserContext';
 import TopUpModal from './TopUpModal';
 
 export default function Header() {
-  const { isLoggedIn, username, balance, inventory, login, logout } = useUser();
+  const { isLoggedIn, username, balance, inventory, logout } = useUser(); 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter(); 
 
   const handleOpenTopUp = () => {
     if (!isLoggedIn) {
-      login();
+
+      router.push('/login');
+      return;
     }
     setIsModalOpen(true);
   };
@@ -20,7 +24,6 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-40 border-b border-gray-800 bg-gray-900/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          {/* Левая часть: Логотип и меню */}
           <div className="flex items-center gap-8">
             <Link href="/" className="text-2xl font-black tracking-wider text-amber-500">
               CS2<span className="text-white">BATTLE</span>
@@ -50,7 +53,6 @@ export default function Header() {
             </nav>
           </div>
 
-          {/* Правая часть: Пополнение и Профиль/Вход */}
           <div className="flex items-center gap-3">
             <button
               type="button"
