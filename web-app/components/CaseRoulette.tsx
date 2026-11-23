@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image'; // ← добавили импорт картинок
 import { SkinItem } from '@/context/UserContext';
 
 const CARD_COLORS: Record<string, string> = {
@@ -54,21 +53,7 @@ export default function CaseRoulette({
             <span className="text-[11px] font-bold uppercase text-gray-400">
               {item.name}
             </span>
-            
-
-            <div className="flex flex-1 items-center justify-center py-1">
-              <div className="relative h-14 w-24">
-                <Image
-                  src={item.icon || '/skins/placeholder.png'}
-                  alt={item.skin}
-                  fill
-                  unoptimized
-                  className="object-contain"
-                  sizes="96px"
-                />
-              </div>
-            </div>
-
+            <span className="text-center text-3xl">🔫</span>
             <div>
               <div className="truncate text-xs font-extrabold text-white">
                 {item.skin}
