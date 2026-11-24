@@ -4,7 +4,11 @@ import { useUser } from '@/context/UserContext';
 import Link from 'next/link';
 
 export default function DailyPage() {
-  const { isLoggedIn, streak, lastClaimDate, claimDailyReward } = useUser();
+  const user = useUser();
+    const isLoggedIn = user?.isLoggedIn;
+    const streak = user?.streak || 0;
+    const lastClaimDate = user?.lastClaimDate || null;
+    const claimDailyReward = user?.claimDailyReward;
 
   if (!isLoggedIn) {
     return (
@@ -20,7 +24,7 @@ export default function DailyPage() {
   const today = new Date().toDateString();
   const canClaim = lastClaimDate !== today;
   const currentDay = canClaim ? (streak >= 7 ? 1 : streak + 1) : streak;
-  const rewards = [60, 80, 100, 150, 200, 300, 500];
+  const rewards = [50, 50, 50, 50, 60, 80, 101];
 
   return (
     <div className="mx-auto max-w-4xl py-10 px-4">
