@@ -3,15 +3,21 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/context/UserContext';
+import { useSession, signOut } from 'next-auth/react'; // <-- Добавили signOut
 import TopUpModal from './TopUpModal';
 
 export default function Header() {
-  const { isLoggedIn, username, balance, inventory, login, logout } = useUser();
+  const { username, balance, inventory } = useUser(); // Убрали isLoggedIn и login
+  const { data: session } = useSession(); // <-- Берем сессию
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Определяем статус входа
+  const isLoggedIn = !!session;
 
   const handleOpenTopUp = () => {
     if (!isLoggedIn) {
-      login();
+      window.location.href = '/login'; // Если не вошел — редирект
+      return;
     }
     setIsModalOpen(true);
   };
@@ -29,15 +35,10 @@ export default function Header() {
             <nav className="hidden md:block">
               <ul className="flex items-center gap-6 text-sm font-semibold uppercase tracking-wide text-gray-300">
                 <li>
-                  <Link href="/" className="transition hover:text-amber-400">
-                    Кейсы
-                  </Link>
+                  <Link href="/" className="transition hover:text-amber-400">Кейсы</Link>
                 </li>
                 <li>
-                  <Link
-                    href="/battles"
-                    className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-3 py-1.5 text-amber-400 transition hover:bg-amber-500/20"
-                  >
+                  <Link href="/battles" className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-3 py-1.5 text-amber-400 transition hover:bg-amber-500/20">
                     <span>⚔️</span> Баттлы
                   </Link>
                 </li>
@@ -46,12 +47,8 @@ export default function Header() {
                     Профиль и Отряд ({inventory.length})
                   </Link>
                 </li>
-                {/* ДОБАВИЛИ ССЫЛКУ НА БОНУСЫ */}
                 <li>
-                  <Link 
-                    href="/daily" 
-                    className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-emerald-400 transition hover:bg-emerald-500/20"
-                  >
+                  <Link href="/daily" className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-emerald-400 transition hover:bg-emerald-500/20">
                     <span>🎁</span> Бонус
                   </Link>
                 </li>
@@ -80,12 +77,12 @@ export default function Header() {
                   className="flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 text-sm font-bold text-white hover:bg-gray-700"
                 >
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                  {username}
+                  {session?.user?.name || username || 'Игрок'} 
                 </Link>
 
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => signOut({ callbackUrl: '/' })} // <-- Правильный выход
                   className="cursor-pointer text-xs text-gray-500 hover:text-red-400"
                 >
                   Выход
