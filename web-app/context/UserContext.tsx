@@ -25,7 +25,6 @@ export interface Fighter {
 
 export type SkinSlot = 'weaponeSkin' | 'knifeSkin';
 
-// Выносим константы и хелперы НАРУЖУ, чтобы они не пересоздавались при каждом рендере
 const INITIAL_FIGHTERS: Fighter[] = [
   { slotId: 1, name: 'Штурмовик', role: 'Авангард',        basePower: 10, weaponeSkin: null, knifeSkin: null },
   { slotId: 2, name: 'Снайпер',   role: 'Дальний бой',     basePower: 10, weaponeSkin: null, knifeSkin: null },
@@ -59,11 +58,13 @@ function migrateInventory(saved: any[]): SkinItem[] {
 
 interface UserContextType {
   isLoggedIn: boolean;
-  username: string; // Теперь это поле будет заполняться из сессии
+  username: string;
   balance: number;
   inventory: SkinItem[];
   fighters: Fighter[];
   totalSquadPower: number;
+  streak: number;
+  lastClaimDate: string | null;
   login: () => void;
   logout: () => void;
   addBalance: (amount: number) => void;
@@ -72,16 +73,15 @@ interface UserContextType {
   sellItem: (id: string) => void;
   equipSkin: (slotId: number, item: SkinItem, target: SkinSlot) => void;
   unequipSkin: (slotId: number, target: SkinSlot) => void;
-  streak: number;
-  lastClaimDate: string | null;
   claimDailyReward: () => boolean;
-
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession(); // Получаем сессию
+  const { data: session } = useSession();
+  
+  // Локальный стейт для входа (если заходят не через NextAuth, а по кнопке)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [balance, setBalance] = useState(0);
   const [inventory, setInventory] = useState<SkinItem[]>([]);
@@ -102,12 +102,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // ИСПРАВЛЕНО: Добавили streak и lastClaimDate в зависимости, чтобы они сохранялись!
   useEffect(() => {
     localStorage.setItem(
       'cs2_rpg_data',
       JSON.stringify({ isLoggedIn, balance, inventory, fighters, streak, lastClaimDate })
     );
-  }, [isLoggedIn, balance, inventory, fighters]);
+  }, [isLoggedIn, balance, inventory, fighters, streak, lastClaimDate]);
 
   const login = () => {
     setIsLoggedIn(true);
@@ -115,23 +116,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => setIsLoggedIn(false);
-
-  const claimDailyReward = (): boolean => {
-  const today = new Date().toISOString().split('T')[0]; 
-  
-  if (lastClaimDate === today) {
-    alert("Ты уже получил бонус сегодня!");
-    return false;
-  }
-
-  // Начисляем бонус (например, 100 рублей)
-  addBalance(100);
-  setStreak((prev) => prev + 1);
-  setLastClaimDate(today);
-  return true;
-  
-  alert("Бонус получен! +100 ₽");
-};
 
   const addBalance = (amount: number) => setBalance((prev) => prev + amount);
 
@@ -153,7 +137,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const equipSkin = (slotId: number, item: SkinItem, target: SkinSlot) => {
-    // ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА
     if (item.slot !== target) {
       console.warn(`Ошибка: Нельзя надеть скин в слот ${target}!`);
       return; 
@@ -191,6 +174,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setInventory((prev) => [removed, ...prev]);
   };
 
+  // ИСПРАВЛЕНО: Убрали мертвый код, вернули правильную систему наград
+  const claimDailyReward = (): boolean => {
+    const today = new Date().toISOString().split('T')[0]; 
+    
+    if (lastClaimDate === today) {
+      return false; // Уже получил сегодня
+    }
+
+    const rewards = [50, 50, 50, 50, 60, 80, 100];
+    // Если стрик 7 или больше, начинаем сначала (с 0 индекса)
+    const currentStreak = (streak >= 0 && streak < 7) ? streak : 0;
+    const rewardAmount = rewards[currentStreak];
+
+    addBalance(rewardAmount);
+    setStreak((prev) => (prev >= 7 ? 1 : prev + 1)); 
+    setLastClaimDate(today);
+
+    return true;
+  };
+
   const totalSquadPower = fighters.reduce(
     (sum, f) =>
       sum +
@@ -200,18 +203,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     0
   );
 
-  // Берем никнейм из сессии. Если сессии нет — пишем 'Гость'
+  // Берем никнейм из сессии NextAuth (если вошел через него). Иначе 'Гость'
   const username = session?.user?.name || 'Гость';
+  
+  // Проверяем: залогинен ли он локально ИЛИ через NextAuth
+  const finalIsLoggedIn = isLoggedIn || !!session;
 
   return (
     <UserContext.Provider
       value={{
-        isLoggedIn: !!session, // Если сессия есть, значит залогинен
-        username, // Передаем переменную
+        isLoggedIn: finalIsLoggedIn,
+        username,
         balance,
         inventory,
         fighters,
         totalSquadPower,
+        streak,           
+        lastClaimDate,    
         login,
         logout,
         addBalance,
@@ -220,8 +228,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         sellItem,
         equipSkin,
         unequipSkin,
-        streak,           
-        lastClaimDate,    
         claimDailyReward,
       }}
     >
