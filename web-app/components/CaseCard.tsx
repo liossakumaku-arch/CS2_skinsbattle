@@ -14,9 +14,13 @@ export default function CaseCard({ item }: { item: CaseConfig }) {
       )}
 
       <div
-        className={`mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-gradient-to-br ${item.accentColor} shadow-inner transition duration-300 group-hover:scale-105`}
+        className={`mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-gradient-to-br ${item.accentColor} p-2 shadow-inner transition duration-300 group-hover:scale-105`}
       >
-        <span className="text-5xl">📦</span>
+        <img
+          src={item.icon || '/skins/placeholder.png'}
+          alt={item.title}
+          className="h-full w-full object-contain drop-shadow-xl"
+        />
       </div>
 
       <h3 className="mb-3 text-center text-base font-bold text-gray-100 group-hover:text-amber-400">

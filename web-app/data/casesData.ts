@@ -7,6 +7,7 @@ export interface CaseConfig {
   category: string;
   badge?: string;
   accentColor: string;
+  icon: string; 
   drops: Omit<SkinItem, 'id'>[];
 }
 
@@ -17,6 +18,7 @@ export const CASES_DATA: CaseConfig[] = [
     price: 49,
     category: 'Бюджетные',
     accentColor: 'from-slate-700 to-slate-900',
+    icon: '/cases/case1.png',
     drops: [
       { name: 'P250', skin: 'Песчаная буря', price: 15, power: 8, rarity: 'blue', slot: 'weaponeSkin', icon: '/skins/icon1.jpg' },
       { name: 'MP9', skin: 'Закат', price: 35, power: 14, rarity: 'blue', slot: 'weaponeSkin', icon: '/skins/Sunset.jpg' },
@@ -31,6 +33,7 @@ export const CASES_DATA: CaseConfig[] = [
     category: 'Бюджетные',
     badge: 'ХИТ',
     accentColor: 'from-blue-700 to-slate-900',
+    icon: '/cases/case2.png',
     drops: [
       { name: 'USP-S', skin: 'Страж', price: 70, power: 25, rarity: 'blue', slot: 'weaponeSkin', icon: '/skins/Guardian.jpg' },
       { name: 'M4A1-S', skin: 'Нитро', price: 130, power: 38, rarity: 'purple', slot: 'weaponeSkin', icon: '/skins/Nitro.jpg' },
@@ -45,6 +48,7 @@ export const CASES_DATA: CaseConfig[] = [
     category: 'Популярные сборки',
     badge: 'ТОП',
     accentColor: 'from-amber-600 to-slate-900',
+    icon: '/cases/case3.png',
     drops: [
       { name: 'AK-47', skin: 'Легион Анубиса', price: 320, power: 75, rarity: 'purple', slot: 'weaponeSkin', icon: '/skins/The_Anubis_Legion.jpg' },
       { name: 'M4A4', skin: 'Император', price: 550, power: 110, rarity: 'pink', slot: 'weaponeSkin', icon: '/skins/Emperor.jpg' },
@@ -59,6 +63,7 @@ export const CASES_DATA: CaseConfig[] = [
     category: 'Элитные кейсы',
     badge: 'ШАНС НОЖА',
     accentColor: 'from-yellow-500 to-amber-900',
+    icon: '/cases/case4.png',
     drops: [
       { name: 'Desert Eagle', skin: 'Пламя', price: 1200, power: 200, rarity: 'pink', slot: 'weaponeSkin', icon: '/skins/Flame.jpg' },
       { name: 'AK-47', skin: 'Огненный змей', price: 2600, power: 380, rarity: 'red', slot: 'weaponeSkin', icon: '/skins/Fire_Serpent.jpg' },
