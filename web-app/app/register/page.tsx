@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function RegisterPage() {
+// 1. Выносим всю логику в отдельный компонент
+function RegisterForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -15,34 +16,27 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    //не забудь эту дичку удалить потом 
     console.log("1. Форма перехвачена, отправляем данные...");
     setError("");
     setSuccess("");
     setIsLoading(true);
 
     try {
-      // Отправляем данные на наш API-роут
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
 
-      // AHAHHAHAHAHAHA
-      console.log("2. Ответ от сервера:", res.status); // Проверка статуса
-
+      console.log("2. Ответ от сервера:", res.status);
       const data = await res.json();
 
       if (!res.ok) {
-        // Если сервер вернул ошибку (например, "Пользователь уже существует")
         throw new Error(data.error || "Что-то пошло не так");
       }
 
       setSuccess("Аккаунт успешно создан!");
-      // Мгновенный переход, но оставляем сообщение об успехе на всякий случай
       router.push("/login");
-
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -58,14 +52,12 @@ export default function RegisterPage() {
           <p className="text-sm text-slate-400 mt-2">Присоединяйтесь к CS2 Skins Battle</p>
         </div>
 
-        {/* Блок ошибки */}
         {error && (
           <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400 border border-red-500/20 text-center">
             {error}
           </div>
         )}
 
-        {/* Блок успеха */}
         {success && (
           <div className="rounded-lg bg-green-500/10 p-3 text-sm text-green-400 border border-green-500/20 text-center">
             {success}
@@ -124,5 +116,14 @@ export default function RegisterPage() {
         </p>
       </form>
     </div>
+  );
+}
+
+// 2. Экспортируем страницу, оборачивая форму в Suspense
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-white">Загрузка...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
