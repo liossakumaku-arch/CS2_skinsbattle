@@ -81,7 +81,6 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   
-  // Локальный стейт для входа (если заходят не через NextAuth, а по кнопке)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [balance, setBalance] = useState(0);
   const [inventory, setInventory] = useState<SkinItem[]>([]);
@@ -89,54 +88,80 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [streak, setStreak] = useState(0);
   const [lastClaimDate, setLastClaimDate] = useState<string | null>(null);
 
+  // 1. Загрузка данных из БД при входе (вместо localStorage)
   useEffect(() => {
-    const saved = localStorage.getItem('cs2_rpg_data');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setIsLoggedIn(parsed.isLoggedIn || false);
-      setBalance(parsed.balance || 0);
-      setStreak(parsed.streak || 0);
-      setLastClaimDate(parsed.lastClaimDate || null);
-      setInventory(migrateInventory(parsed.inventory || []));
-      if (parsed.fighters) setFighters(migrateFighters(parsed.fighters));
-    }
-  }, []);
+    if (!session) return;
+    
+    fetch('/api/user/data', {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        setBalance(data.balance);
+        setInventory(migrateInventory(data.inventory || []));
+        if (data.fighters) setFighters(migrateFighters(data.fighters));
+        setStreak(data.streak || 0);
+        setLastClaimDate(data.lastClaimDate || null);
+      })
+      .catch(err => console.error("Ошибка загрузки данных:", err));
+  }, [session]);
 
-  // ИСПРАВЛЕНО: Добавили streak и lastClaimDate в зависимости, чтобы они сохранялись!
-  useEffect(() => {
-    localStorage.setItem(
-      'cs2_rpg_data',
-      JSON.stringify({ isLoggedIn, balance, inventory, fighters, streak, lastClaimDate })
-    );
-  }, [isLoggedIn, balance, inventory, fighters, streak, lastClaimDate]);
+  // 2. Функция сохранения на сервер (вызывать после изменений)
+  const saveToServer = async (newData: any) => {
+    if (!session) return;
+    
+    try {
+      await fetch('/api/user/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newData),
+      });
+    } catch (err) {
+      console.error("Ошибка сохранения:", err);
+    }
+  };
 
   const login = () => {
     setIsLoggedIn(true);
-    if (balance === 0) setBalance(1000);
+    if (balance === 0) setBalance(67);
   };
 
   const logout = () => setIsLoggedIn(false);
 
-  const addBalance = (amount: number) => setBalance((prev) => prev + amount);
+  // ИСПРАВЛЕНО: Теперь addBalance реально работает и сохраняет на сервер
+  const addBalance = async (amount: number) => {
+    const newBalance = balance + amount;
+    setBalance(newBalance);
+    await saveToServer({ balance: newBalance, inventory, fighters, streak, lastClaimDate });
+  };
 
   const spendBalance = (amount: number) => {
     if (balance < amount) return false;
-    setBalance((prev) => prev - amount);
+    const newBalance = balance - amount;
+    setBalance(newBalance);
+    saveToServer({ balance: newBalance, inventory, fighters, streak, lastClaimDate });
     return true;
   };
 
-  const addItem = (item: SkinItem) => {
-    setInventory((prev) => [item, ...prev]);
+  const addItem = async (item: SkinItem) => {
+    const newInventory = [item, ...inventory];
+    setInventory(newInventory);
+    await saveToServer({ balance, inventory: newInventory, fighters, streak, lastClaimDate });
   };
 
-  const sellItem = (id: string) => {
+  const sellItem = async (id: string) => {
     const target = inventory.find((i) => i.id === id);
     if (!target) return;
-    setBalance((prev) => prev + target.price);
-    setInventory((prev) => prev.filter((i) => i.id !== id));
+    
+    const newBalance = balance + target.price;
+    const newInventory = inventory.filter((i) => i.id !== id);
+    
+    setBalance(newBalance);
+    setInventory(newInventory);
+    await saveToServer({ balance: newBalance, inventory: newInventory, fighters, streak, lastClaimDate });
   };
 
-  const equipSkin = (slotId: number, item: SkinItem, target: SkinSlot) => {
+  const equipSkin = async (slotId: number, item: SkinItem, target: SkinSlot) => {
     if (item.slot !== target) {
       console.warn(`Ошибка: Нельзя надеть скин в слот ${target}!`);
       return; 
@@ -147,49 +172,59 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     const previous = fighter[target];
 
-    setFighters((prev) =>
-      prev.map((f) =>
-        f.slotId === slotId ? { ...f, [target]: item } : f
-      )
+    const newFighters = fighters.map((f) =>
+      f.slotId === slotId ? { ...f, [target]: item } : f
     );
 
-    setInventory((prev) => {
-      const withoutNew = prev.filter((i) => i.id !== item.id);
-      return previous ? [previous, ...withoutNew] : withoutNew;
-    });
+    const withoutNew = inventory.filter((i) => i.id !== item.id);
+    const newInventory = previous ? [previous, ...withoutNew] : withoutNew;
+
+    setFighters(newFighters);
+    setInventory(newInventory);
+    await saveToServer({ balance, inventory: newInventory, fighters: newFighters, streak, lastClaimDate });
   };
 
-  const unequipSkin = (slotId: number, target: SkinSlot) => {
+  const unequipSkin = async (slotId: number, target: SkinSlot) => {
     const fighter = fighters.find((f) => f.slotId === slotId);
     if (!fighter || !fighter[target]) return;
 
     const removed = fighter[target]!;
 
-    setFighters((prev) =>
-      prev.map((f) =>
-        f.slotId === slotId ? { ...f, [target]: null } : f
-      )
+    const newFighters = fighters.map((f) =>
+      f.slotId === slotId ? { ...f, [target]: null } : f
     );
+    const newInventory = [removed, ...inventory];
 
-    setInventory((prev) => [removed, ...prev]);
+    setFighters(newFighters);
+    setInventory(newInventory);
+    await saveToServer({ balance, inventory: newInventory, fighters: newFighters, streak, lastClaimDate });
   };
 
-  // ИСПРАВЛЕНО: Убрали мертвый код, вернули правильную систему наград
   const claimDailyReward = (): boolean => {
     const today = new Date().toISOString().split('T')[0]; 
     
     if (lastClaimDate === today) {
-      return false; // Уже получил сегодня
+      return false; 
     }
 
     const rewards = [50, 50, 50, 50, 60, 80, 100];
-    // Если стрик 7 или больше, начинаем сначала (с 0 индекса)
     const currentStreak = (streak >= 0 && streak < 7) ? streak : 0;
     const rewardAmount = rewards[currentStreak];
+    const newBalance = balance + rewardAmount;
+    const newStreak = streak >= 7 ? 1 : streak + 1;
 
-    addBalance(rewardAmount);
-    setStreak((prev) => (prev >= 7 ? 1 : prev + 1)); 
+    setBalance(newBalance);
+    setStreak(newStreak);
     setLastClaimDate(today);
+    
+    // Сохраняем награду в БД
+    saveToServer({ 
+      balance: newBalance, 
+      inventory, 
+      fighters, 
+      streak: newStreak, 
+      lastClaimDate: today 
+    });
 
     return true;
   };
@@ -203,10 +238,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     0
   );
 
-  // Берем никнейм из сессии NextAuth (если вошел через него). Иначе 'Гость'
   const username = session?.user?.name || 'Гость';
-  
-  // Проверяем: залогинен ли он локально ИЛИ через NextAuth
   const finalIsLoggedIn = isLoggedIn || !!session;
 
   return (

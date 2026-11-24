@@ -60,13 +60,13 @@ export default function BattlesPage() {
     return Array.from({ length: 5 }).map((_, i) => {
       let power = averagePower;
       
-      // 80% шанс на изменение силы
+      // 50 шанс на изменение силы
       if (Math.random() < 0.8) {
-        // Если шанс выпал: 20% на уменьшение, 80% на увеличение
+        // Если шанс выпал: 50% на уменьшение, 80% на увеличение
         if (Math.random() < 0.2) {
           power -= Math.floor(Math.random() * 100) + 1; // от -1 до -100
         } else {
-          power += Math.floor(Math.random() * 120) + 1; // от +1 до +120
+          power += Math.floor(Math.random() * 100) + 1; // от +1 до +120
         }
       }
       

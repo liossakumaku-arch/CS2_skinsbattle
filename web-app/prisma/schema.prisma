@@ -18,7 +18,12 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  password      String?   // Поле для хранения хеша пароля (если используете Credentials)
+  password      String?   
+  balance       Int       @default(1000) 
+  inventory     String?   
+  fighters      String?   
+  streak        Int       @default(0)
+  lastClaimDate String?   
 
   accounts      Account[]
   sessions      Session[]

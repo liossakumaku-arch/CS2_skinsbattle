@@ -1,27 +1,45 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "../../../lib/prisma"; // Проверь путь!
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
-  console.log("🔥 1. РОУТ РЕГИСТРАЦИИ ЗАПУЩЕН!"); // <--- Смотрим в терминал VS Code
-  
   try {
     const { email, password, name } = await req.json();
-    console.log("🔥 2. ДАННЫЕ ПРИНЯТЫ:", { email, name });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    console.log("🔥 3. ПЫТАЕМСЯ ЗАПИСАТЬ В БАЗУ...");
-    const user = await prisma.user.create({
-      data: { email, name, password: hashedPassword },
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400 });
+    }
+
+    // Проверяем, нет ли уже такого пользователя
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
     });
-    console.log("🔥 4. УСПЕХ! ID:", user.id);
 
-    // Меняем статус на 299, чтобы отличить от кэша
-    return NextResponse.json({ message: "OK", userId: user.id }, { status: 299 });
-    
+    if (existingUser) {
+      return NextResponse.json({ error: "Пользователь уже существует" }, { status: 400 });
+    }
+
+    // Хешируем пароль
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Создаем пользователя в БД
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name: name || null,
+        password: hashedPassword,
+        // Явно задаем стартовые данные для игры:
+        balance: 67,
+        inventory: JSON.stringify([]), // Пустой массив, закодированный в строку
+        fighters: null,
+        streak: 0,
+        lastClaimDate: null,
+      },
+    });
+
+    return NextResponse.json({ message: "Пользователь создан", userId: user.id }, { status: 201 });
   } catch (error) {
-    console.error("💀 ОШИБКА В API:", error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    console.error("ОШИБКА ПРИ РЕГИСТРАЦИИ:", error);
+    return NextResponse.json({ error: "Ошибка при регистрации" }, { status: 500 });
   }
 }

@@ -20,7 +20,7 @@ export default async function RootLayout({
 
   return (
     <html lang="ru">
-      <body className="flex min-h-screen flex-col text-white antialiased">
+      <body className="flex min-h-screen flex-col bg-gray-950 text-white antialiased">
         <Providers session={session}> 
           <Header />
           <main className="mx-auto w-full max-w-7xl flex-1 px-4">
