@@ -7,8 +7,10 @@ export interface SkinItem {
   name: string;
   skin: string;
   price: number;
-  power: number; // Сила, которую дает скин персонажу
+  power: number;
   rarity: 'blue' | 'purple' | 'pink' | 'red' | 'gold';
+  icon: string;
+  slot: 'weaponeSkin' | 'knifeSkin';
 }
 
 export interface Fighter {
@@ -16,22 +18,20 @@ export interface Fighter {
   name: string;
   role: string;
   basePower: number;
-  weaponeSkin: SkinItem | null; // слот 1 — оружие
-  knifeSkin: SkinItem | null;   // слот 2 — нож
+  weaponeSkin: SkinItem | null;
+  knifeSkin: SkinItem | null;
 }
 
-// Целевой слот экипировки
 export type SkinSlot = 'weaponeSkin' | 'knifeSkin';
 
 const INITIAL_FIGHTERS: Fighter[] = [
-  { slotId: 1, name: 'Штурмовик', role: 'Авангард',       basePower: 10, weaponeSkin: null, knifeSkin: null },
-  { slotId: 2, name: 'Снайпер',   role: 'Дальний бой',    basePower: 10, weaponeSkin: null, knifeSkin: null },
+  { slotId: 1, name: 'Штурмовик', role: 'Авангард',        basePower: 10, weaponeSkin: null, knifeSkin: null },
+  { slotId: 2, name: 'Снайпер',   role: 'Дальний бой',     basePower: 10, weaponeSkin: null, knifeSkin: null },
   { slotId: 3, name: 'Диверсант', role: 'Критический урон', basePower: 10, weaponeSkin: null, knifeSkin: null },
-  { slotId: 4, name: 'Сапёр',     role: 'Защита',         basePower: 10, weaponeSkin: null, knifeSkin: null },
-  { slotId: 5, name: 'Капитан',   role: 'Лидер отряда',   basePower: 15, weaponeSkin: null, knifeSkin: null },
+  { slotId: 4, name: 'Сапёр',     role: 'Защита',          basePower: 10, weaponeSkin: null, knifeSkin: null },
+  { slotId: 5, name: 'Капитан',   role: 'Лидер отряда',    basePower: 15, weaponeSkin: null, knifeSkin: null },
 ];
 
-// Миграция старых сохранений: equippedSkin -> weaponeSkin
 function migrateFighters(saved: any[]): Fighter[] {
   return saved.map((f) => ({
     ...f,
@@ -39,6 +39,20 @@ function migrateFighters(saved: any[]): Fighter[] {
     knifeSkin: f.knifeSkin ?? null,
     equippedSkin: undefined,
   }));
+}
+
+function migrateInventory(saved: any[]): SkinItem[] {
+  return saved.map((i) => {
+    const name = (i.name ?? '').toLowerCase();
+    const isKnife =
+      name.includes('нож') || name.includes('керамбит') || name.includes('штык') || name.includes('бабочка') || name.includes('m9');
+
+    return {
+      ...i,
+      icon: i.icon ?? '/skins/placeholder.png',
+      slot: i.slot ?? (isKnife ? 'knifeSkin' : 'weaponeSkin'),
+    } as SkinItem;
+  });
 }
 
 interface UserContextType {
@@ -72,7 +86,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const parsed = JSON.parse(saved);
       setIsLoggedIn(parsed.isLoggedIn || false);
       setBalance(parsed.balance || 0);
-      setInventory(parsed.inventory || []);
+      setInventory(migrateInventory(parsed.inventory || []));
       if (parsed.fighters) setFighters(migrateFighters(parsed.fighters));
     }
   }, []);
@@ -110,44 +124,45 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setInventory((prev) => prev.filter((i) => i.id !== id));
   };
 
-// Надеть скин из инвентаря в конкретный слот бойца
-const equipSkin = (slotId: number, item: SkinItem, target: SkinSlot) => {
-  const fighter = fighters.find((f) => f.slotId === slotId);
-  if (!fighter) return;
+  const equipSkin = (slotId: number, item: SkinItem, target: SkinSlot) => {
+    // ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА
+    if (item.slot !== target) {
+      console.warn(`Ошибка: Нельзя надеть скин в слот ${target}!`);
+      return; 
+    }
 
-  const previous = fighter[target];   
+    const fighter = fighters.find((f) => f.slotId === slotId);
+    if (!fighter) return;
 
-  setFighters((prev) =>
-    prev.map((f) =>
-      f.slotId === slotId ? { ...f, [target]: item } : f
-    )
-  );
+    const previous = fighter[target];
 
-  setInventory((prev) => {
-    const withoutNew = prev.filter((i) => i.id !== item.id);
-    return previous ? [previous, ...withoutNew] : withoutNew;
-  });
-};
+    setFighters((prev) =>
+      prev.map((f) =>
+        f.slotId === slotId ? { ...f, [target]: item } : f
+      )
+    );
 
-// Снять скин из конкретного слота обратно в инвентарь
-const unequipSkin = (slotId: number, target: SkinSlot) => {
-  const fighter = fighters.find((f) => f.slotId === slotId);
-  if (!fighter || !fighter[target]) return;
+    setInventory((prev) => {
+      const withoutNew = prev.filter((i) => i.id !== item.id);
+      return previous ? [previous, ...withoutNew] : withoutNew;
+    });
+  };
 
-  const removed = fighter[target]!;
+  const unequipSkin = (slotId: number, target: SkinSlot) => {
+    const fighter = fighters.find((f) => f.slotId === slotId);
+    if (!fighter || !fighter[target]) return;
 
-  // 1) Чистый updater — обнуляем слот бойца
-  setFighters((prev) =>
-    prev.map((f) =>
-      f.slotId === slotId ? { ...f, [target]: null } : f
-    )
-  );
+    const removed = fighter[target]!;
 
-  // 2) Возвращаем скин в инвентарь
-  setInventory((prev) => [removed, ...prev]);
-};
+    setFighters((prev) =>
+      prev.map((f) =>
+        f.slotId === slotId ? { ...f, [target]: null } : f
+      )
+    );
 
-  // Общая сила отряда — считаем оба слота
+    setInventory((prev) => [removed, ...prev]);
+  };
+
   const totalSquadPower = fighters.reduce(
     (sum, f) =>
       sum +

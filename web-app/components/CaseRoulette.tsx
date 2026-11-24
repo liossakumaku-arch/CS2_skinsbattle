@@ -53,7 +53,16 @@ export default function CaseRoulette({
             <span className="text-[11px] font-bold uppercase text-gray-400">
               {item.name}
             </span>
-            <span className="text-center text-3xl">🔫</span>
+            
+            {/* Картинка скина в рулетке */}
+            <div className="flex flex-1 items-center justify-center py-1">
+              <img
+                src={item.icon || '/skins/placeholder.png'}
+                alt={item.skin}
+                className="h-14 w-auto object-contain"
+              />
+            </div>
+
             <div>
               <div className="truncate text-xs font-extrabold text-white">
                 {item.skin}
