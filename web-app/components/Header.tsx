@@ -46,6 +46,15 @@ export default function Header() {
                     Профиль и Отряд ({inventory.length})
                   </Link>
                 </li>
+                {/* ДОБАВИЛИ ССЫЛКУ НА БОНУСЫ */}
+                <li>
+                  <Link 
+                    href="/daily" 
+                    className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-emerald-400 transition hover:bg-emerald-500/20"
+                  >
+                    <span>🎁</span> Бонус
+                  </Link>
+                </li>
               </ul>
             </nav>
           </div>

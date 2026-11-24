@@ -63,8 +63,13 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
         {tape.length > 0 ? (
           <CaseRoulette items={tape} winIndex={35} />
         ) : (
-          <div className="mx-auto mb-8 flex h-44 max-w-md items-center justify-center rounded-2xl border-2 border-dashed border-gray-800 bg-gray-950 text-6xl">
-            📦
+          // ВМЕСТО СМАЙЛИКА ТЕПЕРЬ КАРТИНКА КЕЙСА
+          <div className="mx-auto mb-8 flex h-44 max-w-md items-center justify-center rounded-2xl border-2 border-dashed border-gray-800 bg-gray-950 p-4">
+            <img
+              src={caseItem.icon}
+              alt={caseItem.title}
+              className="h-full w-auto object-contain drop-shadow-2xl"
+            />
           </div>
         )}
 
