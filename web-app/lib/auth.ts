@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"; // Если подчеркивает, з�
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" }, // Для Credentials лучше JWT
+  session: { strategy: "jwt" },
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -35,13 +35,20 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login" // Наша кастомная страница входа
   },
   secret: process.env.NEXTAUTH_SECRET,
-  callbacks: {
-    async session({ session, token }) {
-      if (session.user && token.sub) {
-        // Добавляем ID в сессию, чтобы баттлы и баланс работали
-        (session.user as any).id = token.sub; 
-      }
-      return session;
+    callbacks: {
+        async jwt({ token, user }) {
+        if (user) {
+        token.id = user.id;
+        token.name = user.name;
+        }
+        return token;
     },
-  },
-};
+    async session({ session, token }) {
+        if (session.user && token.sub) {
+        (session.user as any).id = token.sub;
+        session.user.name = token.name; 
+        }
+        return session;
+        },
+    },
+}

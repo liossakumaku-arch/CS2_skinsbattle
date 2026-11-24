@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { UserProvider } from '@/context/UserContext';
+import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'CS2BATTLE — Кейсы и Баттлы скинов',
@@ -17,13 +18,13 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="flex min-h-screen flex-col bg-gray-950 text-white antialiased">
-        <UserProvider>
+        <Providers>
           <Header />
           <main className="mx-auto w-full max-w-7xl flex-1 px-4">
             {children}
           </main>
           <Footer />
-        </UserProvider>
+        </Providers>
       </body>
     </html>
   );
