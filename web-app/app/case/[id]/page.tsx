@@ -1,17 +1,14 @@
 'use client';
 
-import { use, useState } from 'react';
+import { Suspense, use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CASES_DATA } from '@/data/casesData';
 import { useUser, SkinItem } from '@/context/UserContext';
 import CaseRoulette from '@/components/CaseRoulette';
 
-export default function CaseOpenPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+// логика
+function CaseContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const { isLoggedIn, login, spendBalance, addItem, addBalance } = useUser();
@@ -37,12 +34,9 @@ export default function CaseOpenPage({
       return;
     }
 
-    const winner =
-      caseItem.drops[Math.floor(Math.random() * caseItem.drops.length)];
+    const winner = caseItem.drops[Math.floor(Math.random() * caseItem.drops.length)];
     const generated = Array.from({ length: 42 }, (_, i) =>
-      i === 35
-        ? winner
-        : caseItem.drops[Math.floor(Math.random() * caseItem.drops.length)]
+      i === 35 ? winner : caseItem.drops[Math.floor(Math.random() * caseItem.drops.length)]
     );
 
     setWonItem(null);
@@ -129,5 +123,15 @@ export default function CaseOpenPage({
         )}
       </div>
     </div>
+  );
+}
+
+//добавили suspense чтоб сайт не пытался прочитать данные из url, которых нет на время предварительного рендериган
+
+export default function CaseOpenPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-white">Загрузка кейса...</div>}>
+      <CaseContent params={params} />
+    </Suspense>
   );
 }
