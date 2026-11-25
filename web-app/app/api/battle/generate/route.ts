@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth"; // Если подчеркивает, используй "../../../../lib/auth"
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
+export async function POST(req: Request) { // <--- ВАЖНО: именно POST!
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
 
@@ -11,12 +11,10 @@ export async function POST(req: Request) {
 
   const { totalSquadPower } = await req.json();
 
-  // Проверяем, есть ли уже активный бой
   let activeBattle = await prisma.activeBattle.findUnique({
     where: { userId }
   });
 
-  // Если боя нет — генерируем и сохраняем в БД
   if (!activeBattle) {
     const averagePower = Math.floor(totalSquadPower / 5);
     const enemyNames = ['Тень', 'Снайпер', 'Штурмовик', 'Разведчик', 'Тяжеловес'];
@@ -39,6 +37,5 @@ export async function POST(req: Request) {
     });
   }
 
-  // ВАЖНО: Мы НЕ возвращаем врагов, а просто говорим, что всё готово
   return NextResponse.json({ status: "ready" });
 }

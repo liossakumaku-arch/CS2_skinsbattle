@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { useSession } from 'next-auth/react';
 
@@ -11,8 +11,9 @@ interface EnemyFighter {
 }
 
 export default function BattlesPage() {
-  const { fighters, addItemToInventory } = useUser();
+  const { fighters } = useUser();
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   const [playerSlots, setPlayerSlots] = useState([0, 1, 2, 3, 4]);
   const [selectedFighterIndex, setSelectedFighterIndex] = useState<number | null>(null);
@@ -21,9 +22,9 @@ export default function BattlesPage() {
   const [battleLog, setBattleLog] = useState<string[]>([]);
   const [result, setResult] = useState<'win' | 'lose' | null>(null);
   
-  // Враги изначально пустые (мы их не видим)
   const [enemies, setEnemies] = useState<EnemyFighter[]>([]);
-  const [isReady, setIsReady] = useState(false); // Готов ли бой на сервере
+  const [isReady, setIsReady] = useState(false);
+  const [isBattleOver, setIsBattleOver] = useState(false); // Флаг окончания боя
 
   const getFighterPower = (fighter: any) => {
     return fighter.basePower + (fighter.weaponeSkin?.power ?? 0) + (fighter.knifeSkin?.power ?? 0);
@@ -33,11 +34,9 @@ export default function BattlesPage() {
     return fighters.reduce((sum: number, f: any) => sum + getFighterPower(f), 0);
   }, [fighters]);
 
-  // 1. При загрузке страницы просто создаем бой в БД (не показываем врагов)
   useEffect(() => {
     async function prepareBattle() {
       if (status === "loading" || !session) return;
-
       try {
         const res = await fetch('/api/battle/generate', {
           method: 'POST',
@@ -45,20 +44,16 @@ export default function BattlesPage() {
           credentials: 'include',
           body: JSON.stringify({ totalSquadPower })
         });
-        
-        if (res.ok) {
-          setIsReady(true); // Враги созданы в базе, но мы их не видим
-        }
+        if (res.ok) setIsReady(true);
       } catch (error) {
         console.error("Ошибка подготовки боя", error);
       }
     }
-    
     prepareBattle();
   }, [session, status, totalSquadPower]);
 
   const handleSelectFighter = (slotIndex: number) => {
-    if (isFighting) return;
+    if (isFighting || isBattleOver) return;
     
     if (selectedFighterIndex === null) {
       setSelectedFighterIndex(slotIndex);
@@ -67,7 +62,6 @@ export default function BattlesPage() {
       const temp = newSlots[selectedFighterIndex];
       newSlots[selectedFighterIndex] = newSlots[slotIndex];
       newSlots[slotIndex] = temp;
-      
       setPlayerSlots(newSlots);
       setSelectedFighterIndex(null);
     }
@@ -80,7 +74,6 @@ export default function BattlesPage() {
     }
     if (!isReady) return;
 
-    // 2. Запрашиваем врагов с сервера ТОЛЬКО в момент старта
     const res = await fetch('/api/battle/reveal', { credentials: 'include' });
     if (!res.ok) {
       alert("Ошибка загрузки врагов");
@@ -90,6 +83,7 @@ export default function BattlesPage() {
     setEnemies(revealedEnemies);
 
     setIsFighting(true);
+    setIsBattleOver(false);
     setResult(null);
     setBattleLog(['⚔️ Бой начался! Бойцы выходят на арену...']);
 
@@ -99,13 +93,10 @@ export default function BattlesPage() {
 
     for (let i = 0; i < 5; i++) {
       await new Promise(resolve => setTimeout(resolve, 800));
-
       const myFighter = fighters[playerSlots[i]];
       const enemyFighter = revealedEnemies[i];
-      
       const myPower = getFighterPower(myFighter);
       const enemyPower = enemyFighter.power;
-
       const myRoll = Math.round(myPower * (0.85 + Math.random() * 0.3));
       const enemyRoll = Math.round(enemyPower * (0.85 + Math.random() * 0.3));
 
@@ -121,46 +112,42 @@ export default function BattlesPage() {
 
     await new Promise(resolve => setTimeout(resolve, 600));
     setIsFighting(false);
+    setIsBattleOver(true); // Показываем кнопку "Далее"
 
     if (myWins >= 3) {
       setResult('win');
-      const rewardMoney = Math.floor(myTotalPowerInBattle / 100);
+      const rewardMoney = Math.ceil(myTotalPowerInBattle / 100);
+      const isPerfect = myWins === 5;
       
-      await fetch('/api/battle/finish', {
+      // Отправляем результат на сервер
+      const finishRes = await fetch('/api/battle/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ result: 'win', reward: rewardMoney })
+        body: JSON.stringify({ result: 'win', reward: rewardMoney, isPerfectWin: isPerfect })
       });
 
-      let winMessage = `🏆 ПОБЕДА со счетом ${myWins}:${enemyWins}! Выжило ${myWins} членов отряда.`;
-      if (rewardMoney > 0) {
-        winMessage += ` Награда: +${rewardMoney} ₽ (за ${myTotalPowerInBattle} ⚡ силы).`;
+      const finishData = await finishRes.json();
+
+      let winMessage = `🏆 ПОБЕДА со счетом ${myWins}:${enemyWins}!`;
+      if (finishData.totalReward > 0) {
+        winMessage += ` Награда: +${finishData.totalReward} ₽.`;
       }
-      
-      if (myWins === 5) {
-        winMessage += ` ИДЕАЛЬНАЯ ПОБЕДА! Вы получаете случайный скин из лутбокса! 🎁`;
+      if (isPerfect) {
+        winMessage += ` ИДЕАЛЬНАЯ ПОБЕДА! Вы получаете бонус на открытие кейса! 🎁`;
       }
 
       setBattleLog(prev => [...prev, winMessage]);
     } else {
       setResult('lose');
-      
       await fetch('/api/battle/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ result: 'lose', reward: 0 })
+        body: JSON.stringify({ result: 'lose', reward: 0, isPerfectWin: false })
       });
-
-      setBattleLog(prev => [...prev, `💀 ПОРАЖЕНИЕ со счетом ${myWins}:${enemyWins}. Выжило меньше 3 бойцов.`]);
+      setBattleLog(prev => [...prev, `💀 ПОРАЖЕНИЕ со счетом ${myWins}:${enemyWins}.`]);
     }
-    
-    // Сбрасываем готовность и врагов через 3 секунды, чтобы можно было начать новый бой
-    setTimeout(() => {
-      setEnemies([]); 
-      setIsReady(false);
-    }, 3000); 
   };
 
   return (
@@ -179,8 +166,6 @@ export default function BattlesPage() {
       </div>
 
       <div className="mb-8 grid grid-cols-1 items-stretch gap-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 md:grid-cols-11">
-        
-        {/* Твой отряд */}
         <div className="md:col-span-5">
           <div className="mb-3 text-center font-black text-white uppercase text-sm">Ваш отряд (Кликните для смены)</div>
           <div className="space-y-2">
@@ -189,15 +174,12 @@ export default function BattlesPage() {
               if (!f) return null;
               const p = getFighterPower(f);
               const isSelected = selectedFighterIndex === slotIndex;
-
               return (
                 <div
                   key={slotIndex}
                   onClick={() => handleSelectFighter(slotIndex)}
                   className={`flex items-center justify-between rounded-lg px-3 py-3 text-sm cursor-pointer transition-all ${
-                    isSelected 
-                      ? 'bg-amber-500/20 border-2 border-amber-500 scale-105' 
-                      : 'bg-gray-950 border-2 border-transparent hover:border-gray-700'
+                    isSelected ? 'bg-amber-500/20 border-2 border-amber-500 scale-105' : 'bg-gray-950 border-2 border-transparent hover:border-gray-700'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -211,14 +193,12 @@ export default function BattlesPage() {
           </div>
         </div>
 
-        {/* VS */}
         <div className="flex items-center justify-center md:col-span-1">
           <span className="inline-block rounded-full bg-red-600/20 px-4 py-3 text-xl font-black text-red-500 border border-red-500/30">
             VS
           </span>
         </div>
 
-        {/* Отряд врага (Скрыт до начала боя) */}
         <div className="md:col-span-5">
           <div className="mb-3 text-center font-black text-red-400 uppercase text-sm">Зеркальный отряд</div>
           <div className="space-y-2">
@@ -228,10 +208,7 @@ export default function BattlesPage() {
               </div>
             ) : (
               enemies.map((ef, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-lg bg-gray-950 px-3 py-3 text-sm"
-                >
+                <div key={idx} className="flex items-center justify-between rounded-lg bg-gray-950 px-3 py-3 text-sm">
                   <div className="flex items-center gap-3">
                     <span className="text-gray-500 font-mono text-xs">#{idx + 1}</span>
                     <span className="font-bold text-gray-200">{ef.name}</span>
@@ -246,7 +223,7 @@ export default function BattlesPage() {
 
       <div className="mb-8 text-center">
         <button
-          disabled={isFighting || !isReady}
+          disabled={isFighting || !isReady || isBattleOver}
           onClick={startBattle}
           className="rounded-xl bg-amber-500 px-10 py-4 text-lg font-black uppercase text-gray-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-400 disabled:opacity-50"
         >
@@ -257,21 +234,26 @@ export default function BattlesPage() {
       {battleLog.length > 0 && (
         <div
           className={`rounded-2xl border p-6 ${
-            result === 'win'
-              ? 'border-emerald-500 bg-emerald-950/20'
-              : result === 'lose'
-              ? 'border-red-500 bg-red-950/20'
-              : 'border-gray-800 bg-gray-900'
+            result === 'win' ? 'border-emerald-500 bg-emerald-950/20' : result === 'lose' ? 'border-red-500 bg-red-950/20' : 'border-gray-800 bg-gray-900'
           }`}
         >
           <h3 className="mb-3 text-sm font-extrabold uppercase text-gray-400">Ход сражения:</h3>
           <div className="space-y-2 text-sm">
             {battleLog.map((line, i) => (
-              <div key={i} className="font-medium text-gray-200">
-                {line}
-              </div>
+              <div key={i} className="font-medium text-gray-200">{line}</div>
             ))}
           </div>
+        </div>
+      )}
+
+      {isBattleOver && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-xl bg-emerald-600 px-8 py-4 font-black uppercase text-white shadow-lg transition hover:bg-emerald-500"
+          >
+            Далее (Новый бой) →
+          </button>
         </div>
       )}
     </div>
