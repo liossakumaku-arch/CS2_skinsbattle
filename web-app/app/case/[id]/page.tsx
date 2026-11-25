@@ -34,10 +34,32 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
       return;
     }
 
-    const winner = caseItem.drops[Math.floor(Math.random() * caseItem.drops.length)];
-    const generated = Array.from({ length: 42 }, (_, i) =>
-      i === 35 ? winner : caseItem.drops[Math.floor(Math.random() * caseItem.drops.length)]
-    );
+    // --- ЛОГИКА ВЫПАДЕНИЯ С ШАНСАМИ ---
+    const roll = Math.random() * 100;
+    let currentSum = 0;
+    let winner = caseItem.drops[0];
+
+    for (const drop of caseItem.drops) {
+      const dropChance = drop.chance || 10;
+      currentSum += dropChance;
+      if (roll <= currentSum) {
+        winner = drop;
+        break;
+      }
+    }
+
+    // --- ЛОГИКА ВИЗУАЛЬНОЙ ЛЕНТЫ ---
+    // Фильтруем скины: берем только те, у которых шанс больше 1% (дешевки)
+    const commonDrops = caseItem.drops.filter(d => (d.chance || 10) > 1);
+    // Если вдруг в кейсе нет дешевых (одни ножи), берем то, что есть
+    const fallbackSkin = commonDrops.length > 0 ? commonDrops[0] : caseItem.drops[0];
+
+    // Заполняем ленту дешевками, а на 35-й позиции ставим реального победителя
+    const generated = Array.from({ length: 42 }, (_, i) => {
+      if (i === 35) return winner;
+      // Берем случайную дешевку из отфильтрованного списка
+      return commonDrops[Math.floor(Math.random() * commonDrops.length)] || fallbackSkin;
+    });
 
     setWonItem(null);
     setTape(generated);
@@ -63,7 +85,6 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
         {tape.length > 0 ? (
           <CaseRoulette items={tape} winIndex={35} />
         ) : (
-          // ВМЕСТО СМАЙЛИКА ТЕПЕРЬ КАРТИНКА КЕЙСА
           <div className="mx-auto mb-8 flex h-44 max-w-md items-center justify-center rounded-2xl border-2 border-dashed border-gray-800 bg-gray-950 p-4">
             <img
               src={caseItem.icon}
