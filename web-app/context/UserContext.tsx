@@ -92,18 +92,34 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) return;
     
-    fetch('/api/user/data', {
-      credentials: 'include',
-    })
-      .then(res => res.json())
-      .then(data => {
-        setBalance(data.balance);
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/user/data', {
+          credentials: 'include',
+        });
+
+        // Если сервер ответил ошибкой (401, 500), не пытаемся парсить JSON
+        if (!res.ok) {
+          console.warn("Ошибка загрузки профиля. Статус:", res.status);
+          return;
+        }
+
+        const text = await res.text();
+        if (!text) return;
+
+        const data = JSON.parse(text);
+        
+        setBalance(data.balance ?? 0);
         setInventory(migrateInventory(data.inventory || []));
         if (data.fighters) setFighters(migrateFighters(data.fighters));
         setStreak(data.streak || 0);
         setLastClaimDate(data.lastClaimDate || null);
-      })
-      .catch(err => console.error("Ошибка загрузки данных:", err));
+      } catch (err) {
+        console.error("Ошибка загрузки данных:", err);
+      }
+    }
+
+    fetchData();
   }, [session]);
 
   // 2. Функция сохранения на сервер (вызывать после изменений)

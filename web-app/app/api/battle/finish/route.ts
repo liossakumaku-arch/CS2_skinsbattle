@@ -3,35 +3,19 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+  const userId = (session?.user as any)?.id;
 
-  const { result, reward, isPerfect } = await req.json();
+  if (!userId) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  // Проверяем, есть ли вообще активный бой (защита от спама запросами)
   const activeBattle = await prisma.activeBattle.findUnique({
-    where: { userId: session.user.id }
+    where: { userId }
   });
 
   if (!activeBattle) {
-    return NextResponse.json({ error: "Активный бой не найден" }, { status: 400 });
+    return NextResponse.json({ error: "Бой не найден" }, { status: 404 });
   }
 
-  // Удаляем бой
-  await prisma.activeBattle.delete({
-    where: { userId: session.user.id }
-  });
-
-  // Начисляем награду только если победа
-  if (result === 'win' && reward > 0) {
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { balance: { increment: reward } }
-    });
-  }
-
-  // (Здесь же можно логику добавления скина, если isPerfect === true)
-
-  return NextResponse.json({ success: true });
+  return NextResponse.json(JSON.parse(activeBattle.enemyData));
 }

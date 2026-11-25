@@ -1,47 +1,68 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/context/UserContext';
+import { useSession } from 'next-auth/react';
 
-// Тип для врага (генерируется динамически)
 interface EnemyFighter {
   name: string;
   power: number;
 }
 
 export default function BattlesPage() {
-  const { fighters, addBalance, isLoggedIn, login, addItemToInventory } = useUser();
+  const { fighters, addItemToInventory } = useUser();
+  const { data: session, status } = useSession();
 
-  // Состояние для расстановки бойцов. 
-  // Инициализируем текущим порядком отряда
   const [playerSlots, setPlayerSlots] = useState([0, 1, 2, 3, 4]);
   const [selectedFighterIndex, setSelectedFighterIndex] = useState<number | null>(null);
 
   const [isFighting, setIsFighting] = useState(false);
   const [battleLog, setBattleLog] = useState<string[]>([]);
   const [result, setResult] = useState<'win' | 'lose' | null>(null);
+  
+  // Враги изначально пустые (мы их не видим)
   const [enemies, setEnemies] = useState<EnemyFighter[]>([]);
+  const [isReady, setIsReady] = useState(false); // Готов ли бой на сервере
 
-  // Вычисляем силу каждого бойца с учетом скинов
   const getFighterPower = (fighter: any) => {
     return fighter.basePower + (fighter.weaponeSkin?.power ?? 0) + (fighter.knifeSkin?.power ?? 0);
   };
 
-  // Общая сила отряда
   const totalSquadPower = useMemo(() => {
     return fighters.reduce((sum: number, f: any) => sum + getFighterPower(f), 0);
   }, [fighters]);
 
-  // Логика перестановки бойцов (Drag & Drop через клики для простоты)
+  // 1. При загрузке страницы просто создаем бой в БД (не показываем врагов)
+  useEffect(() => {
+    async function prepareBattle() {
+      if (status === "loading" || !session) return;
+
+      try {
+        const res = await fetch('/api/battle/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ totalSquadPower })
+        });
+        
+        if (res.ok) {
+          setIsReady(true); // Враги созданы в базе, но мы их не видим
+        }
+      } catch (error) {
+        console.error("Ошибка подготовки боя", error);
+      }
+    }
+    
+    prepareBattle();
+  }, [session, status, totalSquadPower]);
+
   const handleSelectFighter = (slotIndex: number) => {
     if (isFighting) return;
     
     if (selectedFighterIndex === null) {
-      // Выбрали первого бойца
       setSelectedFighterIndex(slotIndex);
     } else {
-      // Выбрали второго — меняем местами
       const newSlots = [...playerSlots];
       const temp = newSlots[selectedFighterIndex];
       newSlots[selectedFighterIndex] = newSlots[slotIndex];
@@ -52,71 +73,45 @@ export default function BattlesPage() {
     }
   };
 
-  // Функция генерации врагов на основе силы отряда игрока
-  const generateEnemies = (): EnemyFighter[] => {
-    const averagePower = Math.floor(totalSquadPower / 5);
-    const enemyNames = ['Тень', 'Снайпер', 'Штурмовик', 'Разведчик', 'Тяжеловес'];
-    
-    return Array.from({ length: 5 }).map((_, i) => {
-      let power = averagePower;
-      
-      // 50 шанс на изменение силы
-      if (Math.random() < 0.8) {
-        // Если шанс выпал: 50% на уменьшение, 80% на увеличение
-        if (Math.random() < 0.2) {
-          power -= Math.floor(Math.random() * 100) + 1; // от -1 до -100
-        } else {
-          power += Math.floor(Math.random() * 100) + 1; // от +1 до +120
-        }
-      }
-      
-      // Сила не может быть меньше 1
-      if (power < 1) power = 1;
-
-      return {
-        name: `Враг #${i + 1} (${enemyNames[i]})`,
-        power
-      };
-    });
-  };
-
   const startBattle = async () => {
-    if (!isLoggedIn) {
-      login();
+    if (!session) {
+      window.location.href = '/login';
       return;
     }
+    if (!isReady) return;
+
+    // 2. Запрашиваем врагов с сервера ТОЛЬКО в момент старта
+    const res = await fetch('/api/battle/reveal', { credentials: 'include' });
+    if (!res.ok) {
+      alert("Ошибка загрузки врагов");
+      return;
+    }
+    const revealedEnemies: EnemyFighter[] = await res.json();
+    setEnemies(revealedEnemies);
 
     setIsFighting(true);
     setResult(null);
-    
-    // Генерируем врагов перед боем
-    const generatedEnemies = generateEnemies();
-    setEnemies(generatedEnemies);
-    
     setBattleLog(['⚔️ Бой начался! Бойцы выходят на арену...']);
 
     let myWins = 0;
     let enemyWins = 0;
-    let myTotalPowerInBattle = 0; // Сумма силы победивших раундов
+    let myTotalPowerInBattle = 0;
 
-    // Проводим 5 дуэлей
     for (let i = 0; i < 5; i++) {
-      // Ждем для визуального эффекта
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const myFighter = fighters[playerSlots[i]]; // Берем бойца из выставленной ячейки
-      const enemyFighter = generatedEnemies[i];
+      const myFighter = fighters[playerSlots[i]];
+      const enemyFighter = revealedEnemies[i];
       
       const myPower = getFighterPower(myFighter);
       const enemyPower = enemyFighter.power;
 
-      // Небольшой рандом ±15% для непредсказуемости
       const myRoll = Math.round(myPower * (0.85 + Math.random() * 0.3));
       const enemyRoll = Math.round(enemyPower * (0.85 + Math.random() * 0.3));
 
       if (myRoll >= enemyRoll) {
         myWins++;
-        myTotalPowerInBattle += myPower; // Копим силу для награды
+        myTotalPowerInBattle += myPower;
         setBattleLog(prev => [...prev, `✅ Раунд ${i + 1}: Ваш ${myFighter.name} (${myRoll} ⚡) победил ${enemyFighter.name} (${enemyRoll} ⚡)!`]);
       } else {
         enemyWins++;
@@ -124,34 +119,48 @@ export default function BattlesPage() {
       }
     }
 
-    // Подведение итогов
     await new Promise(resolve => setTimeout(resolve, 600));
     setIsFighting(false);
 
     if (myWins >= 3) {
       setResult('win');
-      
-      // Конвертация: 1 рубль за 100 поинтов силы
       const rewardMoney = Math.floor(myTotalPowerInBattle / 100);
-      addBalance(rewardMoney);
       
+      await fetch('/api/battle/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ result: 'win', reward: rewardMoney })
+      });
+
       let winMessage = `🏆 ПОБЕДА со счетом ${myWins}:${enemyWins}! Выжило ${myWins} членов отряда.`;
       if (rewardMoney > 0) {
         winMessage += ` Награда: +${rewardMoney} ₽ (за ${myTotalPowerInBattle} ⚡ силы).`;
       }
       
-      // Если выжило 5 — даем скин
       if (myWins === 5) {
-        // Здесь вызываем функцию добавления скина в инвентарь (заглушка)
-        // addItemToInventory(randomSkin); 
         winMessage += ` ИДЕАЛЬНАЯ ПОБЕДА! Вы получаете случайный скин из лутбокса! 🎁`;
       }
 
       setBattleLog(prev => [...prev, winMessage]);
     } else {
       setResult('lose');
+      
+      await fetch('/api/battle/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ result: 'lose', reward: 0 })
+      });
+
       setBattleLog(prev => [...prev, `💀 ПОРАЖЕНИЕ со счетом ${myWins}:${enemyWins}. Выжило меньше 3 бойцов.`]);
     }
+    
+    // Сбрасываем готовность и врагов через 3 секунды, чтобы можно было начать новый бой
+    setTimeout(() => {
+      setEnemies([]); 
+      setIsReady(false);
+    }, 3000); 
   };
 
   return (
@@ -169,10 +178,9 @@ export default function BattlesPage() {
         </div>
       </div>
 
-      {/* Поле сравнения составов */}
       <div className="mb-8 grid grid-cols-1 items-stretch gap-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 md:grid-cols-11">
         
-        {/* Твой отряд (Расстановка) */}
+        {/* Твой отряд */}
         <div className="md:col-span-5">
           <div className="mb-3 text-center font-black text-white uppercase text-sm">Ваш отряд (Кликните для смены)</div>
           <div className="space-y-2">
@@ -210,13 +218,13 @@ export default function BattlesPage() {
           </span>
         </div>
 
-        {/* Отряд врага (Генерируется) */}
+        {/* Отряд врага (Скрыт до начала боя) */}
         <div className="md:col-span-5">
           <div className="mb-3 text-center font-black text-red-400 uppercase text-sm">Зеркальный отряд</div>
           <div className="space-y-2">
             {enemies.length === 0 ? (
               <div className="flex h-full items-center justify-center text-gray-600 text-sm italic py-10 border-2 border-dashed border-gray-800 rounded-lg">
-                Враги появятся после начала боя
+                ???
               </div>
             ) : (
               enemies.map((ef, idx) => (
@@ -236,10 +244,9 @@ export default function BattlesPage() {
         </div>
       </div>
 
-      {/* Кнопка старта боя */}
       <div className="mb-8 text-center">
         <button
-          disabled={isFighting}
+          disabled={isFighting || !isReady}
           onClick={startBattle}
           className="rounded-xl bg-amber-500 px-10 py-4 text-lg font-black uppercase text-gray-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-400 disabled:opacity-50"
         >
@@ -247,7 +254,6 @@ export default function BattlesPage() {
         </button>
       </div>
 
-      {/* Лог боя */}
       {battleLog.length > 0 && (
         <div
           className={`rounded-2xl border p-6 ${

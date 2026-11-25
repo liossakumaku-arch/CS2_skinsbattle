@@ -24,7 +24,8 @@ model User {
   fighters      String?   
   streak        Int       @default(0)
   lastClaimDate String?   
-
+  activeBattle  ActiveBattle? 
+  
   accounts      Account[]
   sessions      Session[]
 }
@@ -65,4 +66,13 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model ActiveBattle {
+  id           String   @id @default(cuid())
+  userId       String   @unique 
+  enemyData    String   
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

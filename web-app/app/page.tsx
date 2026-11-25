@@ -1,10 +1,36 @@
 import Link from 'next/link';
 import CaseCard from '@/components/CaseCard';
 import { CASES_DATA } from '@/data/casesData';
+import { Suspense } from 'react';
 import { prisma } from '@/lib/prisma';
 
-export default async function HomePage() {
-  const users = await prisma.user.findMany();
+// 1. Выносим запрос к базе в отдельный асинхронный компонент
+async function UsersList() {
+  // Если база данных пуста или недоступна, это не сломает всю страницу
+  try {
+    const users = await prisma.user.findMany();
+    
+    if (users.length === 0) {
+      return <p className="text-sm text-gray-500">Пользователей пока нет.</p>;
+    }
+
+    return (
+      <div className="flex gap-2">
+        {users.map((u) => (
+          <span key={u.id} className="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300">
+            {u.email || u.name || 'Без имени'}
+          </span>
+        ))}
+      </div>
+    );
+  } catch (error) {
+    console.error("Ошибка загрузки юзеров:", error);
+    return <p className="text-sm text-red-500">База данных недоступна.</p>;
+  }
+}
+
+// 2. Основная страница теперь НЕ async, она просто рендерит верстку
+export default function HomePage() {
   const categories = ['Бюджетные', 'Популярные сборки', 'Элитные кейсы'];
 
   return (
@@ -17,7 +43,15 @@ export default async function HomePage() {
           <p className="text-sm text-gray-400">
             Выбивай редкие скины из кейсов, экипируй персонажей в профиле и сражайся на арене!
           </p>
+          
+          {/* 3. Оборачиваем UsersList в Suspense. Пока база думает, покажем заглушку */}
+          <div className="mt-4">
+            <Suspense fallback={<p className="text-sm text-gray-500">Загрузка пользователей...</p>}>
+              <UsersList />
+            </Suspense>
+          </div>
         </div>
+        
         <Link
           href="/battles"
           className="whitespace-nowrap rounded-xl bg-amber-500 px-6 py-3 font-extrabold text-gray-950 transition hover:bg-amber-400"
