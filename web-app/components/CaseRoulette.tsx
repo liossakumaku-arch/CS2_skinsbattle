@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { SkinItem } from '@/context/UserContext';
 
 const CARD_COLORS: Record<string, string> = {
+  white: 'border-b-4 border-white-500 bg-gray-900',
+  cyan: 'border-b-4 border-cyan-400 bg-gray-900',
   blue: 'border-b-4 border-blue-500 bg-gray-900',
   purple: 'border-b-4 border-purple-500 bg-gray-900',
   pink: 'border-b-4 border-pink-500 bg-gray-900',

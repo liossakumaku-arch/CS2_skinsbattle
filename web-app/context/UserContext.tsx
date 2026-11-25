@@ -9,9 +9,10 @@ export interface SkinItem {
   skin: string;
   price: number;
   power: number;
-  rarity: 'blue' | 'purple' | 'pink' | 'red' | 'gold';
+  rarity: 'white' | 'cyan' | 'blue' | 'purple' | 'pink' | 'red' | 'gold';
   icon: string;
   slot: 'weaponeSkin' | 'knifeSkin';
+  сhance?: number;
 }
 
 export interface Fighter {

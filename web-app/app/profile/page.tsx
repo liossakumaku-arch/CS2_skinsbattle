@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useUser, SkinItem } from '@/context/UserContext';
 
 const RARITY_BORDER = {
+  white: 'border-white',
+  cyan: 'border-cyan-400',
   blue: 'border-blue-500',
   purple: 'border-purple-500',
   pink: 'border-pink-500',
