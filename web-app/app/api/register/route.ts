@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400 });
     }
 
-    // Проверяем, нет ли уже такого пользователя
+    // Проверка
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -28,9 +28,9 @@ export async function POST(req: Request) {
         email,
         name: name || null,
         password: hashedPassword,
-        // Явно задаем стартовые данные для игры:
+        //задаем стартовые данные для игры:
         balance: 67,
-        inventory: JSON.stringify([]), // Пустой массив, закодированный в строку
+        inventory: JSON.stringify([]), 
         fighters: null,
         streak: 0,
         lastClaimDate: null,

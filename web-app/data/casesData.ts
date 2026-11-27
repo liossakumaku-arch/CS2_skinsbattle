@@ -59,7 +59,7 @@ export const CASES_DATA: CaseConfig[] = [
     category: 'Бюджетные',
     badge: 'ВА-БАНК',
     accentColor: 'from-emerald-600 to-teal-900',
-    icon: '/cases/case5.jpg', // Не забудь положить картинку кейса в public/cases/
+    icon: '/cases/case5.jpg', 
     drops: [
       { name: 'Какашка', skin: 'Обычная', price: 1, power: 1, rarity: 'white', slot: 'weaponeSkin', icon: '/skins/placeholder.png', chance: 99.9},
       { name: 'AWP', skin: 'Драконье пламя (Dragon Lore)', price: 10000, power: 1500, rarity: 'gold', slot: 'weaponeSkin', icon: '/skins/Dragon_Lore.jpg', chance: 0.1},
@@ -93,6 +93,23 @@ export const CASES_DATA: CaseConfig[] = [
       { name: 'AK-47', skin: 'Огненный змей', price: 2600, power: 380, rarity: 'red', slot: 'weaponeSkin', icon: '/skins/Fire_Serpent.jpg', chance: 30 },
       { name: 'Штык-нож M9', skin: 'Градиент', price: 5500, power: 750, rarity: 'gold', slot: 'knifeSkin', icon: '/skins/Gradient.jpg', chance: 3 },
       { name: 'Нож-бабочка', skin: 'Волны', price: 8800, power: 1200, rarity: 'gold', slot: 'knifeSkin', icon: '/skins/Waves.jpg', chance: 2 },
+    ],
+  },
+    {
+    id: 6,
+    title: 'Элитный Ножевой Джекпот',
+    price: 4999,
+    category: 'Элитные кейсы',
+    badge: 'НОЖИ 6 ШТ',
+    accentColor: 'from-rose-600 to-slate-900',
+    icon: '/cases/case6.png',
+    drops: [
+      { name: 'Штык-нож', skin: 'Лоретта', price: 3500, power: 400, rarity: 'pink', slot: 'knifeSkin', icon: '/skins/Knife_Bayonet.jpg', chance: 30 },
+      { name: 'Кухонный нож', skin: 'Слоновая кость', price: 4200, power: 450, rarity: 'pink', slot: 'knifeSkin', icon: '/skins/Knife_Karambit.jpg', chance: 20 },
+      { name: 'Нож-бабочка', skin: 'Синий стяг', price: 4800, power: 500, rarity: 'red', slot: 'knifeSkin', icon: '/skins/Knife_Butterfly.jpg', chance: 15 },
+      { name: 'Керамбит', skin: 'Автотроника', price: 6000, power: 700, rarity: 'red', slot: 'knifeSkin', icon: '/skins/Autotronics1.jpg', chance: 15 },
+      { name: 'Штык-нож M9', skin: 'Градиент', price: 7500, power: 800, rarity: 'gold', slot: 'knifeSkin', icon: '/skins/Gradient1.jpg', chance: 12 },
+      { name: 'Керамбит', skin: 'Градиент', price: 9500, power: 1000, rarity: 'gold', slot: 'knifeSkin', icon: '/skins/Karambit_Fade.jpg', chance: 8 },
     ],
   },
 ];

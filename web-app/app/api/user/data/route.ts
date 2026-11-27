@@ -1,15 +1,12 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // путь к твоему конфигу
+import { authOptions } from "@/lib/auth"; 
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-// GET: Загрузка данных при входе
+// Загрузка данных при входе
 export async function GET() {
   const session = await getServerSession(authOptions);
   
-  //console.log("--- API USER DATA ---");
-  //console.log("SESSION:", session); 
-  //рабочие процессы
 
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -29,7 +26,7 @@ export async function GET() {
   });
 }
 
-// POST: Сохранение данных (вызывать после каждого изменения)
+// Сохранение данных 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

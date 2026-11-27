@@ -24,7 +24,7 @@ export default function BattlesPage() {
   
   const [enemies, setEnemies] = useState<EnemyFighter[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const [isBattleOver, setIsBattleOver] = useState(false); // Флаг окончания боя
+  const [isBattleOver, setIsBattleOver] = useState(false); 
 
   const getFighterPower = (fighter: any) => {
     return fighter.basePower + (fighter.weaponeSkin?.power ?? 0) + (fighter.knifeSkin?.power ?? 0);
@@ -112,7 +112,7 @@ export default function BattlesPage() {
 
     await new Promise(resolve => setTimeout(resolve, 600));
     setIsFighting(false);
-    setIsBattleOver(true); // Показываем кнопку "Далее"
+    setIsBattleOver(true); 
 
     if (myWins >= 3) {
       setResult('win');

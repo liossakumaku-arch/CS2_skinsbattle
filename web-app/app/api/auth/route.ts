@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400 });
     }
 
-    // Проверяем, нет ли уже такого пользователя
+    // Проверяем
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Пользователь уже существует" }, { status: 400 });
     }
 
-    // Хешируем пароль (10 — количество раундов соли)
+    // Хешируем пароль 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Создаем пользователя в БД

@@ -15,20 +15,20 @@ export async function POST(req: Request) {
   const activeBattle = await prisma.activeBattle.findUnique({ where: { userId } });
   if (!activeBattle) return NextResponse.json({ error: "Бой не найден" }, { status: 400 });
 
-  // Удаляем активный бой
+  // активный бой
   await prisma.activeBattle.delete({ where: { userId } });
 
   let totalReward = 0;
 
   if (result === 'win') {
-    // Базовая награда (100 очков = 1 монета)
+    // Базовая награда 
     totalReward += reward;
 
-    // Бонус за идеальную победу (5:0) — стоимость самого дешевого кейса
+    // Бонус за идеальную победу 
     if (isPerfectWin) {
       const cheapestCase = [...CASES_DATA].sort((a, b) => a.price - b.price)[0];
       if (cheapestCase) {
-        totalReward += cheapestCase.price; // Добавляем цену кейса в рублях
+        totalReward += cheapestCase.price; // Добавляем цену кейса 
       }
     }
 
@@ -39,6 +39,6 @@ export async function POST(req: Request) {
     });
   }
 
-  // Возвращаем итоговую награду на клиент, чтобы показать в логе
+  // Возвращаем итоговую награду , чтобы показать 
   return NextResponse.json({ success: true, totalReward });
 }

@@ -7,7 +7,6 @@ import { CASES_DATA } from '@/data/casesData';
 import { useUser, SkinItem } from '@/context/UserContext';
 import CaseRoulette from '@/components/CaseRoulette';
 
-// логика
 function CaseContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -34,7 +33,6 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
       return;
     }
 
-    // --- ЛОГИКА ВЫПАДЕНИЯ С ШАНСАМИ ---
     const roll = Math.random() * 100;
     let currentSum = 0;
     let winner = caseItem.drops[0];
@@ -48,16 +46,11 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
       }
     }
 
-    // --- ЛОГИКА ВИЗУАЛЬНОЙ ЛЕНТЫ ---
-    // Фильтруем скины: берем только те, у которых шанс больше 1% (дешевки)
     const commonDrops = caseItem.drops.filter(d => (d.chance || 10) > 1);
-    // Если вдруг в кейсе нет дешевых (одни ножи), берем то, что есть
     const fallbackSkin = commonDrops.length > 0 ? commonDrops[0] : caseItem.drops[0];
 
-    // Заполняем ленту дешевками, а на 35-й позиции ставим реального победителя
     const generated = Array.from({ length: 42 }, (_, i) => {
       if (i === 35) return winner;
-      // Берем случайную дешевку из отфильтрованного списка
       return commonDrops[Math.floor(Math.random() * commonDrops.length)] || fallbackSkin;
     });
 
@@ -69,6 +62,16 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
       setIsSpinning(false);
       setWonItem({ ...winner, id: `${Date.now()}-${Math.random()}` });
     }, 4500);
+  };
+
+  const RARITY_COLORS: Record<string, string> = {
+    white: 'border-white-500',
+    cyan: 'border-cyan-400',
+    blue: 'border-blue-500',
+    purple: 'border-purple-500',
+    pink: 'border-pink-500',
+    red: 'border-red-500',
+    gold: 'border-amber-400',
   };
 
   return (
@@ -148,11 +151,47 @@ function CaseContent({ params }: { params: Promise<{ id: string }> }) {
           </button>
         )}
       </div>
+
+      {/* БЛОК: ЧТО ВНУТРИ КЕЙСА */}
+      <div className="mt-8 rounded-2xl border border-gray-800 bg-gray-900 p-6">
+        <h2 className="mb-6 text-xl font-black uppercase text-white">
+          Что внутри?
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {caseItem.drops.map((drop, idx) => (
+            <div
+              key={idx}
+              className={`flex flex-col items-center justify-between rounded-xl border-2 bg-gray-950 p-4 ${
+                RARITY_COLORS[drop.rarity] || 'border-gray-700'
+              }`}
+            >
+              <span className="text-xs font-bold text-gray-400 mb-2">{drop.name}</span>
+              
+              <div className="mb-3 flex h-16 w-full items-center justify-center">
+                <img
+                  src={drop.icon || '/skins/placeholder.png'}
+                  alt={drop.skin}
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+              
+              <span className="text-sm font-extrabold text-white text-center mb-2">{drop.skin}</span>
+              
+              <div className="w-full flex justify-between text-xs font-bold mb-3">
+                <span className="text-emerald-400">{drop.price} ₽</span>
+                <span className="text-amber-400">+{drop.power} ⚡</span>
+              </div>
+
+              <div className="w-full rounded bg-gray-800 py-1 text-center text-xs font-bold text-gray-300">
+                Шанс: {drop.chance || 0}%
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
-
-//добавили suspense чтоб сайт не пытался прочитать данные из url, которых нет на время предварительного рендериган
 
 export default function CaseOpenPage({ params }: { params: Promise<{ id: string }> }) {
   return (
